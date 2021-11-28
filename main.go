@@ -27,9 +27,12 @@ func main() {
 
 	router := gin.Default()
 	api := router.Group("/api/v1")
-	api.POST("/user", userHandler.RegisterUser)
+	user := api.Group("/user")
 
-	router.Run()
+	user.POST("/register", userHandler.RegisterUser)
+	user.POST("/login", userHandler.LoginUser)
+
+	router.Run("localhost:8080")
 
 }
 
