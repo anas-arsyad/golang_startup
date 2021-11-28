@@ -1,6 +1,11 @@
 package helper
 
-import "github.com/go-playground/validator/v10"
+import (
+	"log"
+
+	"github.com/go-playground/validator/v10"
+	"github.com/spf13/viper"
+)
 
 type Response struct {
 	Meta Meta        `json:"meta"`
@@ -34,4 +39,18 @@ func FormatErrorValidation(err error) map[string]interface{} {
 		"errors": validationErr,
 	}
 	return messageError
+}
+func EnvVariable(key string) string {
+	viper.SetConfigFile(".env")
+	err := viper.ReadInConfig()
+	if err != nil {
+		log.Fatalf("Error while reading config file %s", err)
+	}
+
+	value, ok := viper.Get(key).(string)
+	if !ok {
+		log.Fatalf("Invalid type assertion")
+	}
+	return value
+
 }
