@@ -70,6 +70,8 @@ func main() {
 	campaign := api.Group("/campaign")
 	campaign.GET("/", campaignHandler.GetCampaign)
 	campaign.GET("/:id", campaignHandler.GetCampaignById)
+	campaign.POST("/", authMiddleware(authService, userService), campaignHandler.CreateCampaign)
+	campaign.PUT("/:id", authMiddleware(authService, userService), campaignHandler.UpdateCampaign)
 
 	router.Run("localhost:8080")
 
