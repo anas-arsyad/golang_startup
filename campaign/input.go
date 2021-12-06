@@ -14,3 +14,9 @@ type CreateCampaignInput struct {
 	GoalAmount       int    `json:"goalAmount" binding:"required"`
 	User             user.User
 }
+
+type CreateCampaignImageInput struct {
+	CamapaignId int  `form:"campaignId" binding:"required"`
+	IsPrimary   bool `form:"isPrimary"`
+	User        user.User
+}
