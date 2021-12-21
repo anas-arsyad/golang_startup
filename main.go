@@ -5,6 +5,7 @@ import (
 	"bwastartup/campaign"
 	"bwastartup/handler"
 	"bwastartup/helper"
+	"bwastartup/payment"
 	"bwastartup/transaction"
 	"bwastartup/user"
 	"fmt"
@@ -16,7 +17,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 )
 
 func main() {
@@ -29,7 +29,7 @@ func main() {
 
 	dsn := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", username, password, port, table)
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+		// Logger: logger.Default.LogMode(logger.Info),
 	})
 
 	if err != nil {
@@ -44,7 +44,8 @@ func main() {
 	authService := auth.NewServiceJwt()
 	userService := user.NewService(userRepository)
 	campaignService := campaign.NewService(campaignRepository)
-	transactionService := transaction.NewService(transactioRepository, campaignRepository)
+	paymentService := payment.NewService()
+	transactionService := transaction.NewService(transactioRepository, campaignRepository, paymentService)
 
 	// a, _ := campaignService.GetCampaignById(1)
 	// toLog, _ := json.MarshalIndent(a, "", "  ")
@@ -82,6 +83,7 @@ func main() {
 	transaction := api.Group("/transaction")
 	campaign.GET("/:id/transactions", authMiddleware(authService, userService), transactionHandler.GetCampaignById)
 	transaction.GET("/", authMiddleware(authService, userService), transactionHandler.GetUserTransactions)
+	transaction.POST("/", authMiddleware(authService, userService), transactionHandler.CreateTransaction)
 
 	router.Run("localhost:8080")
 
@@ -98,7 +100,6 @@ func authMiddleware(authService auth.Service, userService user.Service) gin.Hand
 		}
 
 		arrayToken := strings.Split(authHeader, " ")
-		fmt.Println(arrayToken)
 		tokenString := ""
 		if len(arrayToken) == 2 {
 			tokenString = arrayToken[1]

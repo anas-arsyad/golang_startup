@@ -2,21 +2,24 @@ package transaction
 
 import (
 	"bwastartup/campaign"
+	"bwastartup/payment"
 	"errors"
 )
 
 type Service interface {
 	GetTransactionCampaignById(input GetCampaignIdInput) ([]Transaction, error)
 	GetTransactionUserById(userId int) ([]Transaction, error)
+	CreateTransaction(input CreateTransactionInput) (Transaction, error)
 }
 
 type service struct {
 	repository         Repository
 	campaignRepository campaign.Repository
+	paymentService     payment.Service
 }
 
-func NewService(r Repository, campaignRepository campaign.Repository) *service {
-	return &service{r, campaignRepository}
+func NewService(r Repository, campaignRepository campaign.Repository, paymentService payment.Service) *service {
+	return &service{r, campaignRepository, paymentService}
 }
 
 func (s *service) GetTransactionCampaignById(input GetCampaignIdInput) ([]Transaction, error) {
@@ -42,4 +45,32 @@ func (s *service) GetTransactionUserById(userId int) ([]Transaction, error) {
 		return transactions, err
 	}
 	return transactions, err
+}
+
+func (s *service) CreateTransaction(input CreateTransactionInput) (Transaction, error) {
+	transaction := Transaction{}
+	transaction.Amount = input.Amount
+	transaction.CampaignId = input.CampaignId
+	transaction.UserId = input.User.ID
+	transaction.Status = "pending"
+	newTransaction, err := s.repository.Save(transaction)
+	if err != nil {
+		return newTransaction, err
+	}
+
+	paymentTransaction := payment.Transaction{}
+	paymentTransaction.Id = transaction.ID
+	paymentTransaction.Amount = transaction.Amount
+
+	paymentUrl, err := s.paymentService.GetPaymentUrl(paymentTransaction, input.User)
+	if err != nil {
+		return newTransaction, err
+	}
+	newTransaction.PaymentUrl = paymentUrl
+	newTransaction, err = s.repository.Update(newTransaction)
+	if err != nil {
+		return newTransaction, err
+	}
+
+	return newTransaction, err
 }
