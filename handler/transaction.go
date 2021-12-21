@@ -3,6 +3,7 @@ package handler
 import (
 	"bwastartup/helper"
 	"bwastartup/transaction"
+	"bwastartup/user"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -25,12 +26,31 @@ func (h *transactionHandler) GetCampaignById(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, response)
 		return
 	}
-	transaction, err := h.transactionService.GetTransactionCampaignById(input)
+	currenUser := c.MustGet("currentUser").(user.User)
+	input.User = currenUser
+	transactionRes, err := h.transactionService.GetTransactionCampaignById(input)
 	if err != nil {
 		response := helper.ApiResponse("Failed Get Campaign", http.StatusBadRequest, "error", nil)
 		c.JSON(http.StatusBadRequest, response)
 		return
 	}
-	response := helper.ApiResponse("Success Get Campaign", http.StatusOK, "success", transaction)
+	trsansactions := transaction.FormatCampaignTransactions(transactionRes)
+	response := helper.ApiResponse("Success Get Campaign", http.StatusOK, "success", trsansactions)
 	c.JSON(http.StatusOK, response)
+}
+
+func (h *transactionHandler) GetUserTransactions(c *gin.Context) {
+	currentUser := c.MustGet("currentUser").(user.User)
+
+	userId := currentUser.ID
+	transactions, err := h.transactionService.GetTransactionUserById(userId)
+	if err != nil {
+		response := helper.ApiResponse("Failed Get User Transaction Campaign", http.StatusBadRequest, "error", nil)
+		c.JSON(http.StatusBadRequest, response)
+		return
+	}
+	formatter := transaction.FormatUserTransactions(transactions)
+	response := helper.ApiResponse("Failed Get User Transaction Campaign", http.StatusOK, "success", formatter)
+	c.JSON(http.StatusOK, response)
+
 }

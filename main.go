@@ -44,7 +44,7 @@ func main() {
 	authService := auth.NewServiceJwt()
 	userService := user.NewService(userRepository)
 	campaignService := campaign.NewService(campaignRepository)
-	transactionService := transaction.NewService(transactioRepository)
+	transactionService := transaction.NewService(transactioRepository, campaignRepository)
 
 	// a, _ := campaignService.GetCampaignById(1)
 	// toLog, _ := json.MarshalIndent(a, "", "  ")
@@ -79,8 +79,9 @@ func main() {
 	campaign.POST("/campaign-images", authMiddleware(authService, userService), campaignHandler.UploadImage)
 
 	/* TRANSACTION */
-	// transaction:=api.Group("/transaction")
-	campaign.GET("/:id/transactions", transactionHandler.GetCampaignById)
+	transaction := api.Group("/transaction")
+	campaign.GET("/:id/transactions", authMiddleware(authService, userService), transactionHandler.GetCampaignById)
+	transaction.GET("/", authMiddleware(authService, userService), transactionHandler.GetUserTransactions)
 
 	router.Run("localhost:8080")
 
@@ -97,6 +98,7 @@ func authMiddleware(authService auth.Service, userService user.Service) gin.Hand
 		}
 
 		arrayToken := strings.Split(authHeader, " ")
+		fmt.Println(arrayToken)
 		tokenString := ""
 		if len(arrayToken) == 2 {
 			tokenString = arrayToken[1]
