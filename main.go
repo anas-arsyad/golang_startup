@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -56,6 +57,7 @@ func main() {
 	transactionHandler := handler.NewTransactionHandler(transactionService)
 
 	router := gin.Default()
+	router.Use(cors.Default())
 	router.Static("/images", "./images")
 	router.SetTrustedProxies([]string{"localhost"})
 	router.GET("/", func(c *gin.Context) {
@@ -84,6 +86,7 @@ func main() {
 	campaign.GET("/:id/transactions", authMiddleware(authService, userService), transactionHandler.GetCampaignById)
 	transaction.GET("/", authMiddleware(authService, userService), transactionHandler.GetUserTransactions)
 	transaction.POST("/", authMiddleware(authService, userService), transactionHandler.CreateTransaction)
+	transaction.POST("/notification", transactionHandler.GetNotification)
 
 	router.Run("localhost:8080")
 

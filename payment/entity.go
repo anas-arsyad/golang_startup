@@ -1,6 +1,6 @@
 package payment
 
 type Transaction struct {
-	Id     int
+	Id     string
 	Amount int
 }

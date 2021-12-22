@@ -3,7 +3,6 @@ package payment
 import (
 	"bwastartup/helper"
 	"bwastartup/user"
-	"strconv"
 
 	"github.com/veritrans/go-midtrans"
 )
@@ -37,7 +36,7 @@ func (s *service) GetPaymentUrl(transaction Transaction, user user.User) (string
 			Email: user.Email,
 		},
 		TransactionDetails: midtrans.TransactionDetails{
-			OrderID:  strconv.Itoa(transaction.Id),
+			OrderID:  transaction.Id,
 			GrossAmt: int64(transaction.Amount),
 		},
 	}

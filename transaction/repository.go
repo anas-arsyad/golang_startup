@@ -7,6 +7,7 @@ import (
 type Repository interface {
 	GetCampaignById(campaignId int) ([]Transaction, error)
 	GetUserById(userId int) ([]Transaction, error)
+	GetTransactionById(transactionId int) (Transaction, error)
 	Save(transaction Transaction) (Transaction, error)
 	Update(transaction Transaction) (Transaction, error)
 }
@@ -37,6 +38,14 @@ func (r *repository) GetUserById(userId int) ([]Transaction, error) {
 		return nil, err
 	}
 	return transactions, err
+}
+func (r *repository) GetTransactionById(transactionId int) (Transaction, error) {
+	transaction := Transaction{}
+	err := r.db.Where("id=?", transactionId).Find(&transaction).Error
+	if err != nil {
+		return transaction, err
+	}
+	return transaction, err
 }
 
 func (r *repository) Save(transaction Transaction) (Transaction, error) {

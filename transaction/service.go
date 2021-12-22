@@ -4,12 +4,16 @@ import (
 	"bwastartup/campaign"
 	"bwastartup/payment"
 	"errors"
+	"strconv"
+
+	"github.com/google/uuid"
 )
 
 type Service interface {
 	GetTransactionCampaignById(input GetCampaignIdInput) ([]Transaction, error)
 	GetTransactionUserById(userId int) ([]Transaction, error)
 	CreateTransaction(input CreateTransactionInput) (Transaction, error)
+	ProcessPayment(input TransactionNotificationInput) error
 }
 
 type service struct {
@@ -18,8 +22,8 @@ type service struct {
 	paymentService     payment.Service
 }
 
-func NewService(r Repository, campaignRepository campaign.Repository, paymentService payment.Service) *service {
-	return &service{r, campaignRepository, paymentService}
+func NewService(repository Repository, campaignRepository campaign.Repository, paymentService payment.Service) *service {
+	return &service{repository, campaignRepository, paymentService}
 }
 
 func (s *service) GetTransactionCampaignById(input GetCampaignIdInput) ([]Transaction, error) {
@@ -57,9 +61,9 @@ func (s *service) CreateTransaction(input CreateTransactionInput) (Transaction, 
 	if err != nil {
 		return newTransaction, err
 	}
-
+	id := uuid.New()
 	paymentTransaction := payment.Transaction{}
-	paymentTransaction.Id = transaction.ID
+	paymentTransaction.Id = id.String()
 	paymentTransaction.Amount = transaction.Amount
 
 	paymentUrl, err := s.paymentService.GetPaymentUrl(paymentTransaction, input.User)
@@ -73,4 +77,39 @@ func (s *service) CreateTransaction(input CreateTransactionInput) (Transaction, 
 	}
 
 	return newTransaction, err
+}
+
+func (s *service) ProcessPayment(input TransactionNotificationInput) error {
+	transactionId, _ := strconv.Atoi(input.OrderId)
+	currentTransaction, err := s.repository.GetTransactionById(transactionId)
+	if err != nil {
+		return err
+	}
+	if input.PaymentType == "credit_card" && input.TransactionStatus == "capture" && input.FraudStatus == "accept" {
+		currentTransaction.Status = "paid"
+	} else if input.TransactionStatus == "settlement" {
+		currentTransaction.Status = "paid"
+	} else if input.TransactionStatus == "deny" || input.TransactionStatus == "expire" || input.TransactionStatus == "cancel" {
+		currentTransaction.Status = "cancelled"
+	}
+
+	updatedTransaction, err := s.repository.Update(currentTransaction)
+	if err != nil {
+		return err
+	}
+	campaign, err := s.campaignRepository.FindByCampaignId(updatedTransaction.CampaignId)
+	if err != nil {
+		return err
+	}
+
+	if updatedTransaction.Status == "paid" {
+		campaign.BackerCount = campaign.BackerCount + 1
+		campaign.CurrentAmount = campaign.CurrentAmount + updatedTransaction.Amount
+
+		_, err := s.campaignRepository.Update(campaign)
+		if err != nil {
+			return err
+		}
+	}
+	return err
 }
